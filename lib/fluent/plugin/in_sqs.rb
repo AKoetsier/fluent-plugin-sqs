@@ -1,6 +1,6 @@
 module Fluent
 
-  require 'aws-sdk-v1'
+  require 'aws-sdk'
 
   class SQSInput < Input
     Plugin.register_input('sqs', self)
@@ -30,12 +30,11 @@ module Fluent
     def start
       super
 
-      AWS.config(
+      @client = Aws::SQS::Client.new(
         :access_key_id => @aws_key_id,
-        :secret_access_key => @aws_sec_key
+        :secret_access_key => @aws_sec_key,
+        :endpoint => @sqs_endpoint
         )
-
-      @queue = AWS::SQS.new(:sqs_endpoint => @sqs_endpoint).queues[@sqs_url]
 
       @finished = false
       @thread = Thread.new(&method(:run_periodic))
@@ -52,17 +51,18 @@ module Fluent
       until @finished
         begin
           sleep @receive_interval
-          @queue.receive_message(
-            :limit => @max_number_of_messages,
+          @client.receive_message(
+            :queue_url => @sqs_url,
+            :max_number_of_messages => @max_number_of_messages,
             :wait_time_seconds => @wait_time_seconds
           ) do |message|
             record = {}
-            record['body'] = message.body.to_s
-            record['handle'] = message.handle.to_s
-            record['id'] = message.id.to_s
-            record['md5'] = message.md5.to_s
-            record['url'] = message.queue.url.to_s
-            record['sender_id'] = message.sender_id.to_s
+            record['body'] = message.body
+            record['handle'] = message.receipt_handle
+            record['id'] = message.message_id
+            record['md5'] = message.md5_of_body
+            record['url'] = @sqs_url
+            record['sender_id'] = message.attributes['SenderId']
 
             router.emit(@tag, Time.now.to_i, record)
           end

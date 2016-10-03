@@ -1,6 +1,6 @@
 module Fluent
 
-    require 'aws-sdk-v1'
+    require 'aws-sdk'
 
     SQS_BATCH_SEND_MAX_MSGS = 10
     SQS_BATCH_SEND_MAX_SIZE = 262144
@@ -30,16 +30,16 @@ module Fluent
         def start
             super
 
-            AWS.config(
+            @client = Aws::SQS::Client.new(
                 :access_key_id => @aws_key_id,
-                :secret_access_key => @aws_sec_key)
+                :secret_access_key => @aws_sec_key,
+                :endpoint => @sqs_endpoint
+            )
 
-            @sqs = AWS::SQS.new(
-                :sqs_endpoint => @sqs_endpoint)
             if @create_queue then
-                @queue = @sqs.queues.create(@queue_name)
+                @queue_url = @client.create_queue(queue_name: @queue_name).queue_url
             else
-                @queue = @sqs.queues.named(@queue_name)
+                @queue_url = @client.get_queue_url(queue_name: @queue_name).queue_url
             end
         end
 
@@ -82,7 +82,7 @@ module Fluent
             until send_batches.length <= 0 do
                 records = send_batches.shift
                 until records.length <= 0 do
-                    @queue.batch_send(records.slice!(0..9))
+                    @client.send_message_batch(queue_url: @queue_url, entries: records.slice!(0..9))
                 end
             end
         end

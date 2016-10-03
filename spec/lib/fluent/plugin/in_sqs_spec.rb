@@ -19,7 +19,7 @@ describe do
          wait_time_seconds 10
       ]
     }
-    
+
     context do
       subject {instance.aws_key_id}
       it{should == 'AWS_KEY_ID'}
@@ -55,7 +55,7 @@ describe do
       it{should == 10}
     end
   end
-  
+
   describe 'emit' do
     let(:message) do
       { 'body' => 'body',
@@ -69,7 +69,7 @@ describe do
     let(:emmits) {
       allow(Time).to receive(:now).and_return(0)
 
-      class AWS::SQS::Queue
+      class Aws::SQS::Client
         def receive_message(opts)
           yield OpenStruct.new(
             { 'body' => 'body',
@@ -82,7 +82,7 @@ describe do
             })
         end
       end
-      expect_any_instance_of(AWS::SQS::Queue).to receive(:receive_message).with({:limit => 10, :wait_time_seconds=>10}).at_least(:once).and_call_original
+      expect_any_instance_of(Aws::SQS::Client).to receive(:receive_message).with({:limit => 10, :wait_time_seconds=>10}).at_least(:once).and_call_original
 
       d = driver
       d.run do

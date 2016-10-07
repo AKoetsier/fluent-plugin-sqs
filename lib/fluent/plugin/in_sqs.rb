@@ -63,9 +63,14 @@ module Fluent
             record['id'] = message.message_id
             record['md5'] = message.md5_of_body
             record['url'] = @sqs_url
-            record['sender_id'] = message.attributes['SenderId'].string_value
+            record['sender_id'] = message.attributes['SenderId']
 
             router.emit(@tag, Time.now.to_i, record)
+
+            @client.delete_message({
+              queue_url: @sqs_url,
+              receipt_handle: message.receipt_handle
+            })
           end
         rescue
           $log.error "failed to emit or receive", :error => $!.to_s, :error_class => $!.class.to_s

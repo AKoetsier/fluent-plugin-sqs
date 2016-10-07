@@ -51,18 +51,19 @@ module Fluent
       until @finished
         begin
           sleep @receive_interval
-          @client.receive_message(
+          resp = @client.receive_message(
             :queue_url => @sqs_url,
             :max_number_of_messages => @max_number_of_messages,
             :wait_time_seconds => @wait_time_seconds
-          ) do |message|
+          )
+          resp.messages.each do |message|
             record = {}
-            record['body'] = message['body'].to_s
-            record['handle'] = message['receipt_handle'].to_s
-            record['id'] = message['message_id'].to_s
-            record['md5'] = message['md5_of_body'].to_s
+            record['body'] = message.body
+            record['handle'] = message.receipt_handle
+            record['id'] = message.message_id
+            record['md5'] = message.md5_of_body
             record['url'] = @sqs_url
-            record['sender_id'] = message['attributes']['SenderId'].to_s
+            record['sender_id'] = message.attributes['SenderId'].string_value
 
             router.emit(@tag, Time.now.to_i, record)
           end

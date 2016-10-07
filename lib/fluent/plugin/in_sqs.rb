@@ -57,12 +57,12 @@ module Fluent
             :wait_time_seconds => @wait_time_seconds
           ) do |message|
             record = {}
-            record['body'] = message.body
-            record['handle'] = message.receipt_handle
-            record['id'] = message.message_id
-            record['md5'] = message.md5_of_body
+            record['body'] = message['body'].to_s
+            record['handle'] = message['receipt_handle'].to_s
+            record['id'] = message['message_id'].to_s
+            record['md5'] = message['md5_of_body'].to_s
             record['url'] = @sqs_url
-            record['sender_id'] = message.attributes['SenderId']
+            record['sender_id'] = message['attributes']['SenderId'].to_s
 
             router.emit(@tag, Time.now.to_i, record)
           end

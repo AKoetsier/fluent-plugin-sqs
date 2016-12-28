@@ -30,14 +30,24 @@ module Fluent
     def start
       super
 
-      @client = Aws::SQS::Client.new(
-        :access_key_id => @aws_key_id,
-        :secret_access_key => @aws_sec_key,
-        :endpoint => @sqs_endpoint
-        )
+      @client = self.connect
 
       @finished = false
       @thread = Thread.new(&method(:run_periodic))
+    end
+
+    def connect
+      begin
+        return Aws::SQS::Client.new(
+            :access_key_id => @aws_key_id,
+            :secret_access_key => @aws_sec_key,
+            :endpoint => @sqs_endpoint
+        )
+      rescue
+          $log.error "failed to emit or receive", :error => $!.to_s, :error_class => $!.class.to_s
+          $log.warn_backtrace $!.backtrace
+          return nil
+      end
     end
 
     def shutdown
@@ -49,6 +59,12 @@ module Fluent
 
     def run_periodic
       until @finished
+        unless @client
+          sleep @wait_time_seconds
+          @client = self.connect
+          redo unless @client
+        end
+
         begin
           sleep @receive_interval
           resp = @client.receive_message(
@@ -75,6 +91,9 @@ module Fluent
         rescue
           $log.error "failed to emit or receive", :error => $!.to_s, :error_class => $!.class.to_s
           $log.warn_backtrace $!.backtrace
+
+          # Force reconnect
+          @client = nil
         end
       end
     end

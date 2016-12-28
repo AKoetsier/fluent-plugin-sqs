@@ -44,8 +44,8 @@ module Fluent
             :endpoint => @sqs_endpoint
         )
       rescue
-          $log.error "failed to emit or receive", :error => $!.to_s, :error_class => $!.class.to_s
-          $log.warn_backtrace $!.backtrace
+          $log.error "failed to connect", :error => $!.to_s, :error_class => $!.class.to_s
+          $log.error_backtrace
           return nil
       end
     end
@@ -90,7 +90,7 @@ module Fluent
           end
         rescue
           $log.error "failed to emit or receive", :error => $!.to_s, :error_class => $!.class.to_s
-          $log.warn_backtrace $!.backtrace
+          $log.error_backtrace
 
           # Force reconnect
           @client = nil
